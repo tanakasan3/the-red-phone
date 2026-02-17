@@ -1,0 +1,109 @@
+# The Red Phone Configuration
+# Copy to /etc/redphone/config.yaml and customize
+
+phone:
+  # Display name shown to other phones
+  name: "Kitchen"
+  
+  # Unique SIP extension number (101-999)
+  extension: 101
+
+network:
+  # VPN provider: tailscale, wireguard, none
+  vpn: tailscale
+  
+  # Tailscale network name (for discovery)
+  tailnet: example.ts.net
+  
+  # Tag for discovery (phones with this tag are discoverable)
+  tag: redphone
+
+audio:
+  # ALSA device names (use 'arecord -l' and 'aplay -l' to list)
+  input: "default"
+  output: "default"
+  
+  # Volume levels (0-100)
+  ring_volume: 80
+  call_volume: 70
+  
+  # Ring tone file (relative to /opt/redphone/ui/sounds/)
+  ringtone: "classic.wav"
+
+quiet_hours:
+  # Enable quiet hours confirmation dialog
+  enabled: true
+  
+  # Quiet hours start time (24h format)
+  start: "22:00"
+  
+  # Quiet hours end time (24h format)  
+  end: "08:00"
+  
+  # Timezone for quiet hours calculation
+  timezone: "Asia/Tokyo"
+
+discovery:
+  # Enable mDNS local network discovery
+  mdns: true
+  
+  # Enable Tailscale API discovery
+  tailscale_api: true
+  
+  # How often to poll for new phones (seconds)
+  poll_interval: 30
+
+ui:
+  # UI theme: dark, light
+  theme: dark
+  
+  # Screen timeout (0 = never)
+  screen_timeout: 300
+  
+  # Show clock on idle screen
+  show_clock: true
+
+admin:
+  # Enable admin web interface
+  enabled: false
+  
+  # Admin password (required if enabled)
+  password: ""
+  
+  # Serve configuration to other phones
+  serve_config: false
+
+config:
+  # Pull config from admin server (leave empty for standalone)
+  server: ""
+  
+  # Config pull interval (seconds)
+  pull_interval: 300
+
+gpio:
+  # Enable GPIO hook switch detection
+  enabled: false
+  
+  # BCM pin number for hook switch
+  hook_pin: 17
+  
+  # Hook switch logic: high_on_lift or low_on_lift
+  hook_logic: high_on_lift
+
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: INFO
+  
+  # Log file path
+  file: /var/log/redphone/app.log
+
+asterisk:
+  # Asterisk AMI credentials (usually leave defaults)
+  ami_host: "127.0.0.1"
+  ami_port: 5038
+  ami_user: "redphone"
+  ami_secret: "redphone"
+  
+  # RTP port range
+  rtp_start: 10000
+  rtp_end: 20000

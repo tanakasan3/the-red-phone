@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Calling {{ target.name }}{% endblock %}
+
+{% block body_class %}screen-calling{% endblock %}
+
+{% block content %}
+<main class="fullscreen-center">
+    <div class="call-status">
+        <div class="target-name">{{ target.name }}</div>
+        <div class="status-text" id="status">Calling...</div>
+        <div class="call-animation">
+            <span class="ring-dot"></span>
+            <span class="ring-dot"></span>
+            <span class="ring-dot"></span>
+        </div>
+    </div>
+    
+    <button class="hangup-button" onclick="hangup()">
+        ✕ Cancel
+    </button>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const socket = io();
+    
+    // Initiate the call
+    fetch('/api/call', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({extension: {{ target.extension }}})
+    });
+    
+    socket.on('state_change', (data) => {
+        if (data.status === 'in_call') {
+            window.location.href = '/in-call';
+        } else if (data.status === 'idle') {
+            window.location.href = '/';
+        }
+    });
+    
+    function hangup() {
+        fetch('/api/hangup', {method: 'POST'})
+            .then(() => window.location.href = '/');
+    }
+    
+    // Timeout after 30 seconds
+    setTimeout(() => {
+        document.getElementById('status').textContent = 'No answer';
+        setTimeout(() => hangup(), 2000);
+    }, 30000);
+</script>
+{% endblock %}

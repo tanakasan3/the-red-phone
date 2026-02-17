@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}WiFi Setup{% endblock %}
+
+{% block body_class %}screen-setup{% endblock %}
+
+{% block content %}
+<main>
+    <header>
+        <h1>📶 WiFi Setup</h1>
+    </header>
+    
+    <div class="setup-container">
+        <p>Select a WiFi network to connect:</p>
+        
+        <div id="networks" class="network-list">
+            <p class="loading">Scanning for networks...</p>
+        </div>
+        
+        <div id="password-form" class="hidden">
+            <h3 id="selected-network"></h3>
+            <input type="password" id="password" placeholder="WiFi Password" autocomplete="off">
+            <div class="button-row">
+                <button onclick="cancelConnect()" class="button cancel-button">Cancel</button>
+                <button onclick="connectWifi()" class="button confirm-button">Connect</button>
+            </div>
+        </div>
+        
+        <div id="status-message" class="status-message hidden"></div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedSSID = '';
+    
+    // Scan for networks
+    async function scanNetworks() {
+        try {
+            const resp = await fetch('/api/wifi/scan');
+            const data = await resp.json();
+            
+            const container = document.getElementById('networks');
+            container.innerHTML = '';
+            
+            data.networks.forEach(net => {
+                const btn = document.createElement('button');
+                btn.className = 'network-button';
+                btn.innerHTML = `
+                    <span class="ssid">${net.ssid}</span>
+                    <span class="signal">${net.signal}%</span>
+                `;
+                btn.onclick = () => selectNetwork(net.ssid);
+                container.appendChild(btn);
+            });
+            
+        } catch (e) {
+            document.getElementById('networks').innerHTML = 
+                '<p class="error">Failed to scan networks</p>';
+        }
+    }
+    
+    function selectNetwork(ssid) {
+        selectedSSID = ssid;
+        document.getElementById('selected-network').textContent = ssid;
+        document.getElementById('password-form').classList.remove('hidden');
+        document.getElementById('password').focus();
+    }
+    
+    function cancelConnect() {
+        document.getElementById('password-form').classList.add('hidden');
+        document.getElementById('password').value = '';
+        selectedSSID = '';
+    }
+    
+    async function connectWifi() {
+        const password = document.getElementById('password').value;
+        const statusEl = document.getElementById('status-message');
+        
+        statusEl.textContent = 'Connecting...';
+        statusEl.classList.remove('hidden', 'error');
+        
+        try {
+            const resp = await fetch('/api/wifi/connect', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ssid: selectedSSID, password})
+            });
+            
+            const data = await resp.json();
+            
+            if (data.success) {
+                statusEl.textContent = 'Connected! Redirecting...';
+                setTimeout(() => window.location.href = '/', 3000);
+            } else {
+                statusEl.textContent = data.error || 'Connection failed';
+                statusEl.classList.add('error');
+            }
+        } catch (e) {
+            statusEl.textContent = 'Connection failed';
+            statusEl.classList.add('error');
+        }
+    }
+    
+    // Initial scan
+    scanNetworks();
+</script>
+{% endblock %}

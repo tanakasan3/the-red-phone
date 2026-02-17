@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}In Call{% endblock %}
+
+{% block body_class %}screen-in-call{% endblock %}
+
+{% block content %}
+<main class="fullscreen-center">
+    <div class="call-active">
+        <div class="peer-name">{{ peer.name if peer else 'Connected' }}</div>
+        <div class="call-timer" id="timer">00:00</div>
+        <div class="call-indicator">
+            <span class="pulse"></span>
+            Connected
+        </div>
+    </div>
+    
+    <button class="hangup-button large" onclick="hangup()">
+        End Call
+    </button>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const socket = io();
+    let seconds = 0;
+    
+    // Call timer
+    const timerEl = document.getElementById('timer');
+    setInterval(() => {
+        seconds++;
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        timerEl.textContent = `${m}:${s}`;
+    }, 1000);
+    
+    socket.on('state_change', (data) => {
+        if (data.status === 'idle') {
+            window.location.href = '/';
+        }
+    });
+    
+    function hangup() {
+        fetch('/api/hangup', {method: 'POST'})
+            .then(() => window.location.href = '/');
+    }
+</script>
+{% endblock %}

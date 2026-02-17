@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{{ phone_name }} - The Red Phone{% endblock %}
+
+{% block body_class %}screen-main{% endblock %}
+
+{% block content %}
+<header>
+    <h1>📞 {{ phone_name }}</h1>
+    {% if is_quiet %}
+    <div class="quiet-indicator">🌙 Quiet Hours</div>
+    {% endif %}
+</header>
+
+<main>
+    {% if state == 'idle' and not handset_lifted %}
+    <div class="prompt">
+        <p class="instruction">Pick up handset to call</p>
+    </div>
+    {% else %}
+    <div class="prompt">
+        <p class="instruction">Who do you want to call?</p>
+    </div>
+    {% endif %}
+    
+    <div class="phone-list" id="phone-list">
+        {% if phones %}
+            {% for phone in phones %}
+            <a href="/call/{{ phone.extension }}" class="phone-button {% if phone.status != 'online' %}offline{% endif %}">
+                <span class="phone-name">{{ phone.name }}</span>
+                <span class="phone-status">{{ phone.status }}</span>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="no-phones">
+                <p>No other phones discovered</p>
+                <p class="hint">Make sure other Red Phones are on the same VPN</p>
+            </div>
+        {% endif %}
+    </div>
+</main>
+
+<footer>
+    <div class="time" id="clock"></div>
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update clock
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('clock').textContent = 
+            now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+    
+    // Socket.io for live updates
+    const socket = io();
+    
+    socket.on('phones_updated', (data) => {
+        location.reload(); // Simple approach - reload page
+    });
+    
+    socket.on('state_change', (data) => {
+        if (data.status === 'ringing') {
+            window.location.href = '/incoming';
+        }
+    });
+</script>
+{% endblock %}

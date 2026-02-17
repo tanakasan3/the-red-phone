@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Quiet Hours{% endblock %}
+
+{% block body_class %}screen-confirm{% endblock %}
+
+{% block content %}
+<main class="fullscreen-center">
+    <div class="confirm-dialog">
+        <div class="quiet-icon">🌙</div>
+        <h2>It's quiet hours</h2>
+        <p>Call <strong>{{ target.name }}</strong> anyway?</p>
+        
+        <div class="button-row">
+            <a href="/" class="button cancel-button">Cancel</a>
+            <form action="/confirm-call/{{ target.extension }}" method="POST" style="display: inline;">
+                <button type="submit" class="button confirm-button">Call Anyway</button>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}

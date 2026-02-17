@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Incoming Call{% endblock %}
+
+{% block body_class %}screen-incoming{% endblock %}
+
+{% block content %}
+<main class="fullscreen-center flashing">
+    <div class="incoming-call">
+        <div class="caller-icon">📞</div>
+        <div class="caller-name">{{ caller.name if caller else 'Unknown' }}</div>
+        <div class="incoming-text">Incoming Call</div>
+    </div>
+    
+    <div class="button-row">
+        <button class="reject-button" onclick="reject()">✕</button>
+        <button class="answer-button" onclick="answer()">✓</button>
+    </div>
+    
+    <p class="hint">Pick up handset to answer</p>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const socket = io();
+    
+    // Play ringtone
+    const audio = new Audio('/static/sounds/classic.wav');
+    audio.loop = true;
+    audio.play().catch(() => {}); // May fail if user hasn't interacted
+    
+    socket.on('state_change', (data) => {
+        if (data.status === 'in_call') {
+            audio.pause();
+            window.location.href = '/in-call';
+        } else if (data.status === 'idle') {
+            audio.pause();
+            window.location.href = '/';
+        }
+    });
+    
+    function answer() {
+        fetch('/api/answer', {method: 'POST'});
+    }
+    
+    function reject() {
+        fetch('/api/hangup', {method: 'POST'})
+            .then(() => {
+                audio.pause();
+                window.location.href = '/';
+            });
+    }
+</script>
+{% endblock %}

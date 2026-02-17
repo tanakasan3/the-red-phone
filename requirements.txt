@@ -1,0 +1,31 @@
+# The Red Phone - Python Dependencies
+
+# Web framework
+flask>=3.0.0
+flask-socketio>=5.3.0
+
+# Configuration
+pyyaml>=6.0
+
+# SIP/VoIP (pjsip Python bindings)
+# Note: pjsua2 needs to be built from source on ARM
+# See docs/SETUP.md for instructions
+
+# Discovery
+zeroconf>=0.100.0
+
+# Tailscale API
+requests>=2.31.0
+
+# GPIO (Raspberry Pi)
+RPi.GPIO>=0.7.1; platform_machine == 'aarch64' or platform_machine == 'armv7l'
+gpiozero>=2.0
+
+# Audio
+pyaudio>=0.2.14
+
+# Async support
+eventlet>=0.35.0
+
+# Utilities
+python-dateutil>=2.8.0
