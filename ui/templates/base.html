@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}{% if debug_enabled %} debug-mode{% endif %}">
     <div id="app">
         {% block content %}{% endblock %}
     </div>
@@ -15,5 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}
+    
+    {% include 'debug_panel.html' ignore missing %}
 </body>
 </html>

@@ -40,6 +40,11 @@
         }
     });
     
+    socket.on('call_ended', () => {
+        audio.pause();
+        window.location.href = '/';
+    });
+    
     function answer() {
         fetch('/api/answer', {method: 'POST'});
     }

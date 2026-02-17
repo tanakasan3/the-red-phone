@@ -48,6 +48,16 @@ state = {
 }
 
 
+# Context processor to inject debug vars into all templates
+@app.context_processor
+def inject_debug():
+    return {
+        "debug_enabled": config.debug_enabled,
+        "debug_config": config.get("debug", {}),
+        "current_call": state.get("current_call"),
+    }
+
+
 # ============================================================================
 # Authentication
 # ============================================================================
@@ -86,6 +96,8 @@ def index():
         state=state["status"],
         handset_lifted=state["handset_lifted"],
         is_quiet=is_quiet_hours(),
+        debug_enabled=config.debug_enabled,
+        debug_config=config.get("debug", {}),
     )
 
 
@@ -322,6 +334,185 @@ def api_answer():
 
     socketio.emit("state_change", {"status": state["status"]})
     return jsonify({"status": "ok"})
+
+
+# ============================================================================
+# Debug API (when debug.enabled = true)
+# ============================================================================
+
+
+def debug_required(f):
+    """Decorator requiring debug mode to be enabled."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not config.debug_enabled:
+            return jsonify({"error": "Debug mode not enabled"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/api/debug/state")
+@debug_required
+def api_debug_state():
+    """Get full phone state for debugging."""
+    return jsonify({
+        "state": state,
+        "config": {
+            "phone_name": config.phone_name,
+            "extension": config.extension,
+            "vpn": config.get("network.vpn"),
+            "debug": config.get("debug"),
+        },
+        "vpn_connected": openvpn.is_connected if config.get("network.vpn") == "openvpn" else None,
+        "vpn_ip": openvpn.get_vpn_ip() if config.get("network.vpn") == "openvpn" else None,
+        "discovered_phones": len(discovery.get_phones()),
+        "is_quiet_hours": is_quiet_hours(),
+    })
+
+
+@app.route("/api/debug/simulate/handset", methods=["POST"])
+@debug_required
+def api_debug_simulate_handset():
+    """Simulate handset lift/replace."""
+    data = request.get_json() or {}
+    lifted = data.get("lifted", not state["handset_lifted"])  # Toggle if not specified
+    
+    state["handset_lifted"] = lifted
+    
+    if lifted:
+        # Simulate lifting handset
+        if state["status"] == PhoneState.IDLE:
+            state["status"] = PhoneState.DIALING
+        elif state["status"] == PhoneState.RINGING:
+            state["status"] = PhoneState.IN_CALL
+    else:
+        # Simulate replacing handset
+        state["status"] = PhoneState.IDLE
+        state["current_call"] = None
+    
+    socketio.emit("state_change", {
+        "status": state["status"],
+        "handset_lifted": state["handset_lifted"],
+    })
+    
+    return jsonify({
+        "status": "ok",
+        "handset_lifted": state["handset_lifted"],
+        "phone_state": state["status"],
+    })
+
+
+@app.route("/api/debug/simulate/incoming", methods=["POST"])
+@debug_required
+def api_debug_simulate_incoming():
+    """Simulate incoming call."""
+    data = request.get_json() or {}
+    
+    caller = {
+        "name": data.get("caller_name", "Debug Caller"),
+        "extension": data.get("caller_extension", 999),
+        "hostname": data.get("caller_hostname", "debug-phone"),
+        "ip": "127.0.0.1",
+    }
+    
+    state["status"] = PhoneState.RINGING
+    state["current_call"] = caller
+    
+    socketio.emit("state_change", {
+        "status": state["status"],
+        "caller": caller,
+    })
+    socketio.emit("incoming_call", {"caller": caller})
+    
+    return jsonify({
+        "status": "ok",
+        "phone_state": state["status"],
+        "caller": caller,
+    })
+
+
+@app.route("/api/debug/simulate/call_answered", methods=["POST"])
+@debug_required  
+def api_debug_simulate_call_answered():
+    """Simulate remote party answering our call."""
+    if state["status"] != PhoneState.CALLING:
+        return jsonify({"error": "Not in calling state"}), 400
+    
+    state["status"] = PhoneState.IN_CALL
+    
+    socketio.emit("state_change", {"status": state["status"]})
+    
+    return jsonify({
+        "status": "ok",
+        "phone_state": state["status"],
+    })
+
+
+@app.route("/api/debug/simulate/call_ended", methods=["POST"])
+@debug_required
+def api_debug_simulate_call_ended():
+    """Simulate remote party ending the call."""
+    state["status"] = PhoneState.IDLE
+    state["current_call"] = None
+    
+    socketio.emit("state_change", {"status": state["status"]})
+    socketio.emit("call_ended", {})
+    
+    return jsonify({
+        "status": "ok",
+        "phone_state": state["status"],
+    })
+
+
+@app.route("/api/debug/simulate/discovery", methods=["POST"])
+@debug_required
+def api_debug_simulate_discovery():
+    """Simulate discovering a phone."""
+    data = request.get_json() or {}
+    
+    from .discovery import Phone
+    from datetime import datetime
+    
+    phone = Phone(
+        name=data.get("name", "Debug Phone"),
+        hostname=data.get("hostname", "debug-phone"),
+        ip=data.get("ip", "10.0.0.99"),
+        extension=data.get("extension", 199),
+        status="online",
+        last_seen=datetime.now(),
+        source="debug",
+    )
+    
+    # Add to discovery
+    key = f"{phone.hostname}_{phone.extension}"
+    discovery.phones[key] = phone
+    
+    # Notify UI
+    socketio.emit("phones_updated", {
+        "phones": [p.to_dict() for p in discovery.get_phones()],
+    })
+    
+    return jsonify({
+        "status": "ok",
+        "phone": phone.to_dict(),
+        "total_phones": len(discovery.get_phones()),
+    })
+
+
+@app.route("/api/debug/reset", methods=["POST"])
+@debug_required
+def api_debug_reset():
+    """Reset phone to idle state."""
+    state["status"] = PhoneState.IDLE
+    state["current_call"] = None
+    state["handset_lifted"] = False
+    
+    socketio.emit("state_change", {
+        "status": state["status"],
+        "handset_lifted": state["handset_lifted"],
+    })
+    
+    return jsonify({"status": "ok", "state": state})
 
 
 @app.route("/health")

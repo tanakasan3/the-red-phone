@@ -138,6 +138,21 @@ gpio:
   hook_logic: high_on_lift  # or low_on_lift
 
 # ==============================================================================
+# DEBUG MODE
+# ==============================================================================
+# Enable debug panel in web UI to simulate hardware actions.
+
+debug:
+  # Show debug panel in web UI
+  enabled: false
+  
+  # Allow simulating hardware events (handset, GPIO, etc.)
+  simulate_hardware: true
+  
+  # Show state info overlay
+  show_state: true
+
+# ==============================================================================
 # LOGGING
 # ==============================================================================
 

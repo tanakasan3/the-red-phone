@@ -41,6 +41,10 @@
         }
     });
     
+    socket.on('call_ended', () => {
+        window.location.href = '/';
+    });
+    
     function hangup() {
         fetch('/api/hangup', {method: 'POST'})
             .then(() => window.location.href = '/');

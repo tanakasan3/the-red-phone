@@ -65,6 +65,11 @@ DEFAULT_CONFIG = {
         "hook_pin": 17,
         "hook_logic": "high_on_lift",
     },
+    "debug": {
+        "enabled": False,
+        "simulate_hardware": True,
+        "show_state": True,
+    },
     "logging": {
         "level": "INFO",
         "file": "/var/log/redphone/app.log",
@@ -179,6 +184,10 @@ class Config:
     @property
     def timezone(self) -> str:
         return self.get("quiet_hours.timezone", "UTC")
+
+    @property
+    def debug_enabled(self) -> bool:
+        return self.get("debug.enabled", False)
 
     def to_dict(self) -> dict[str, Any]:
         """Return full configuration as dictionary."""

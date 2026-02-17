@@ -66,7 +66,16 @@
     socket.on('state_change', (data) => {
         if (data.status === 'ringing') {
             window.location.href = '/incoming';
+        } else if (data.status === 'dialing') {
+            // Handset lifted - could show dial prompt
+            document.querySelector('.instruction').textContent = 'Who do you want to call?';
+        } else if (data.status === 'idle') {
+            document.querySelector('.instruction').textContent = 'Pick up handset to call';
         }
+    });
+    
+    socket.on('incoming_call', (data) => {
+        window.location.href = '/incoming';
     });
 </script>
 {% endblock %}

@@ -1,0 +1,164 @@
+<!-- Debug Panel - Include when debug.enabled = true -->
+{% if debug_enabled %}
+<div id="debug-panel" class="debug-panel">
+    <div class="debug-header" onclick="toggleDebugPanel()">
+        🐛 Debug Panel
+        <span class="debug-toggle">▼</span>
+    </div>
+    <div class="debug-content">
+        <!-- State Display -->
+        {% if debug_config.get('show_state', true) %}
+        <div class="debug-section">
+            <h4>State</h4>
+            <div class="debug-state" id="debug-state">
+                <div><strong>Status:</strong> <span id="debug-status">{{ state }}</span></div>
+                <div><strong>Handset:</strong> <span id="debug-handset">{{ 'Lifted' if handset_lifted else 'On hook' }}</span></div>
+                <div><strong>Call:</strong> <span id="debug-call">{{ current_call.name if current_call else 'None' }}</span></div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Hardware Simulation -->
+        {% if debug_config.get('simulate_hardware', true) %}
+        <div class="debug-section">
+            <h4>Simulate Hardware</h4>
+            <div class="debug-buttons">
+                <button onclick="debugSimulate('handset', {lifted: true})" class="debug-btn">
+                    📞 Lift Handset
+                </button>
+                <button onclick="debugSimulate('handset', {lifted: false})" class="debug-btn">
+                    📴 Replace Handset
+                </button>
+            </div>
+        </div>
+        
+        <!-- Call Simulation -->
+        <div class="debug-section">
+            <h4>Simulate Calls</h4>
+            <div class="debug-buttons">
+                <button onclick="debugSimulate('incoming', {caller_name: 'Test Caller', caller_extension: 199})" class="debug-btn">
+                    📲 Incoming Call
+                </button>
+                <button onclick="debugSimulate('call_answered')" class="debug-btn">
+                    ✅ Call Answered
+                </button>
+                <button onclick="debugSimulate('call_ended')" class="debug-btn">
+                    ❌ Call Ended
+                </button>
+            </div>
+        </div>
+        
+        <!-- Discovery Simulation -->
+        <div class="debug-section">
+            <h4>Simulate Discovery</h4>
+            <div class="debug-buttons">
+                <button onclick="debugAddPhone()" class="debug-btn">
+                    ➕ Add Fake Phone
+                </button>
+            </div>
+        </div>
+        
+        <!-- Reset -->
+        <div class="debug-section">
+            <button onclick="debugReset()" class="debug-btn debug-btn-danger">
+                🔄 Reset State
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Debug panel state
+let debugPanelOpen = true;
+let fakePhoneCounter = 1;
+
+function toggleDebugPanel() {
+    debugPanelOpen = !debugPanelOpen;
+    const content = document.querySelector('.debug-content');
+    const toggle = document.querySelector('.debug-toggle');
+    content.style.display = debugPanelOpen ? 'block' : 'none';
+    toggle.textContent = debugPanelOpen ? '▼' : '▶';
+}
+
+async function debugSimulate(action, data = {}) {
+    try {
+        const resp = await fetch(`/api/debug/simulate/${action}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await resp.json();
+        console.log(`Debug ${action}:`, result);
+        updateDebugState(result);
+    } catch (e) {
+        console.error(`Debug ${action} failed:`, e);
+    }
+}
+
+async function debugAddPhone() {
+    const name = `Fake Phone ${fakePhoneCounter}`;
+    const extension = 900 + fakePhoneCounter;
+    fakePhoneCounter++;
+    
+    await debugSimulate('discovery', {
+        name: name,
+        hostname: name.toLowerCase().replace(/ /g, '-'),
+        extension: extension,
+        ip: `10.0.0.${extension - 800}`
+    });
+}
+
+async function debugReset() {
+    try {
+        const resp = await fetch('/api/debug/reset', {method: 'POST'});
+        const result = await resp.json();
+        console.log('Debug reset:', result);
+        updateDebugState(result);
+    } catch (e) {
+        console.error('Debug reset failed:', e);
+    }
+}
+
+function updateDebugState(data) {
+    if (data.phone_state) {
+        const el = document.getElementById('debug-status');
+        if (el) el.textContent = data.phone_state;
+    }
+    if (data.handset_lifted !== undefined) {
+        const el = document.getElementById('debug-handset');
+        if (el) el.textContent = data.handset_lifted ? 'Lifted' : 'On hook';
+    }
+    if (data.caller) {
+        const el = document.getElementById('debug-call');
+        if (el) el.textContent = data.caller.name;
+    }
+}
+
+// Update debug state on socket events
+if (typeof socket !== 'undefined') {
+    socket.on('state_change', (data) => {
+        updateDebugState({
+            phone_state: data.status,
+            handset_lifted: data.handset_lifted,
+            caller: data.caller
+        });
+    });
+}
+
+// Poll state periodically
+setInterval(async () => {
+    try {
+        const resp = await fetch('/api/debug/state');
+        if (resp.ok) {
+            const data = await resp.json();
+            updateDebugState({
+                phone_state: data.state.status,
+                handset_lifted: data.state.handset_lifted,
+                caller: data.state.current_call
+            });
+        }
+    } catch (e) {}
+}, 2000);
+</script>
+{% endif %}
