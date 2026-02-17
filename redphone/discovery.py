@@ -1,15 +1,16 @@
-"""Phone discovery service using mDNS and UDP broadcast."""
+"""Phone discovery service using mDNS, Tailscale API, and UDP broadcast."""
 
 import json
 import logging
 import socket
-import struct
+import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable, Optional
 
+import requests
 from zeroconf import ServiceBrowser, ServiceInfo, ServiceListener, Zeroconf
 
 from .config import config
@@ -94,6 +95,95 @@ class MDNSListener(ServiceListener):
 
         except Exception as e:
             logger.error(f"Error processing mDNS service: {e}")
+
+
+class TailscaleDiscovery:
+    """Tailscale API discovery for mesh VPN networks."""
+
+    def __init__(self, on_phone_discovered: Callable[[Phone], None]):
+        self.on_phone_discovered = on_phone_discovered
+        self._running = False
+        self._poll_thread: Optional[threading.Thread] = None
+
+    def start(self) -> None:
+        """Start Tailscale API polling."""
+        self._running = True
+        self._poll_thread = threading.Thread(target=self._poll, daemon=True)
+        self._poll_thread.start()
+        logger.info("Tailscale API discovery started")
+
+    def stop(self) -> None:
+        """Stop Tailscale API polling."""
+        self._running = False
+
+    def _poll(self) -> None:
+        """Poll Tailscale for tagged phones."""
+        interval = config.get("discovery.announce_interval", 30)
+
+        while self._running:
+            try:
+                phones = self._discover()
+                for phone in phones:
+                    self.on_phone_discovered(phone)
+            except Exception as e:
+                logger.error(f"Tailscale discovery error: {e}")
+
+            time.sleep(interval)
+
+    def _discover(self) -> list[Phone]:
+        """Query Tailscale for phones with our tag."""
+        phones = []
+
+        try:
+            # Get Tailscale status
+            result = subprocess.run(
+                ["tailscale", "status", "--json"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode != 0:
+                return phones
+
+            status = json.loads(result.stdout)
+            tag = config.get("network.tailscale.tag", "redphone")
+
+            for peer_id, peer in status.get("Peer", {}).items():
+                # Check if peer has our tag
+                tags = peer.get("Tags", []) or []
+                if f"tag:{tag}" in tags:
+                    ip = peer.get("TailscaleIPs", [""])[0]
+                    hostname = peer.get("HostName", "unknown")
+
+                    phone = Phone(
+                        name=peer.get("DisplayName", hostname),
+                        hostname=hostname,
+                        ip=ip,
+                        extension=0,
+                        status="online" if peer.get("Online") else "offline",
+                        last_seen=datetime.now(),
+                        source="tailscale",
+                    )
+
+                    # Try to get extension from phone API
+                    try:
+                        resp = requests.get(f"http://{ip}:5000/api/info", timeout=2)
+                        if resp.ok:
+                            info = resp.json()
+                            phone.extension = info.get("extension", 0)
+                            phone.name = info.get("name", phone.name)
+                    except Exception:
+                        pass
+
+                    phones.append(phone)
+
+        except FileNotFoundError:
+            logger.debug("Tailscale CLI not installed")
+        except Exception as e:
+            logger.error(f"Tailscale status error: {e}")
+
+        return phones
 
 
 class UDPDiscovery:
@@ -242,13 +332,14 @@ class UDPDiscovery:
 
 
 class DiscoveryService:
-    """Phone discovery service combining mDNS and UDP broadcast."""
+    """Phone discovery service combining mDNS, Tailscale API, and UDP broadcast."""
 
     def __init__(self):
         self.phones: dict[str, Phone] = {}
         self._zeroconf: Optional[Zeroconf] = None
         self._browser: Optional[ServiceBrowser] = None
         self._mdns_listener: Optional[MDNSListener] = None
+        self._tailscale_discovery: Optional[TailscaleDiscovery] = None
         self._udp_discovery: Optional[UDPDiscovery] = None
         self._running = False
         self._cleanup_thread: Optional[threading.Thread] = None
@@ -258,12 +349,17 @@ class DiscoveryService:
     def start(self) -> None:
         """Start discovery services."""
         self._running = True
+        vpn_type = config.get("network.vpn", "tailscale")
 
-        # Start mDNS
+        # Start mDNS (always, for local network)
         if config.get("discovery.mdns", True):
             self._start_mdns()
 
-        # Start UDP broadcast discovery
+        # Start Tailscale API discovery (when using Tailscale VPN)
+        if vpn_type == "tailscale" and config.get("discovery.tailscale_api", True):
+            self._start_tailscale()
+
+        # Start UDP broadcast discovery (when using OpenVPN or for LAN)
         if config.get("discovery.udp_broadcast", True):
             self._start_udp()
 
@@ -283,6 +379,9 @@ class DiscoveryService:
                 self._zeroconf.unregister_service(self._service_info)
             self._zeroconf.close()
             self._zeroconf = None
+
+        if self._tailscale_discovery:
+            self._tailscale_discovery.stop()
 
         if self._udp_discovery:
             self._udp_discovery.stop()
@@ -317,13 +416,18 @@ class DiscoveryService:
         except Exception as e:
             logger.error(f"Failed to start mDNS: {e}")
 
+    def _start_tailscale(self) -> None:
+        """Start Tailscale API discovery."""
+        self._tailscale_discovery = TailscaleDiscovery(self._on_phone_discovered)
+        self._tailscale_discovery.start()
+
     def _start_udp(self) -> None:
         """Start UDP broadcast discovery."""
-        self._udp_discovery = UDPDiscovery(self._on_udp_phone)
+        self._udp_discovery = UDPDiscovery(self._on_phone_discovered)
         self._udp_discovery.start()
 
-    def _on_udp_phone(self, phone: Phone) -> None:
-        """Handle phone discovered via UDP."""
+    def _on_phone_discovered(self, phone: Phone) -> None:
+        """Handle phone discovered via Tailscale or UDP."""
         key = f"{phone.hostname}_{phone.extension}"
         existing = self.phones.get(key)
         

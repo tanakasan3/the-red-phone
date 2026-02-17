@@ -27,7 +27,7 @@ Think of it as a private intercom system for your family, hackerspace, or secret
 | Display | Official 7" Raspberry Pi Touchscreen (or compatible) |
 | OS | Raspberry Pi OS (Bookworm) |
 | Audio | USB headset (testing) or 3.5mm TRRS to handset |
-| Network | WiFi or Ethernet + OpenVPN (Asuswrt-Merlin) |
+| Network | WiFi or Ethernet + VPN (Tailscale or OpenVPN) |
 | Enclosure | Vintage rotary phone shell or 3D printed |
 
 ### Audio Options
@@ -60,8 +60,8 @@ Think of it as a private intercom system for your family, hackerspace, or secret
 │                          │                              │
 ├──────────────────────────┼──────────────────────────────┤
 │                   ┌──────▼──────┐                       │
+│                   │ Tailscale / │                       │
 │                   │   OpenVPN   │                       │
-│                   │   (tun0)    │                       │
 │                   └─────────────┘                       │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -148,8 +148,13 @@ phone:
   extension: 101            # SIP extension number
 
 network:
-  vpn: openvpn              # VPN provider
-  openvpn:
+  vpn: tailscale            # Options: tailscale, openvpn, none
+  
+  tailscale:                # Zero-config mesh VPN
+    tailnet: mynet.ts.net
+    tag: redphone
+  
+  openvpn:                  # For Asuswrt-Merlin routers
     config_file: /etc/redphone/vpn/client.ovpn
     auth_file: /etc/redphone/vpn/auth.txt
 
@@ -174,10 +179,21 @@ admin:
 | Component | Choice | Why |
 |-----------|--------|-----|
 | PBX | Asterisk | Open source, runs on Pi, proven |
-| VPN | OpenVPN | Works with Asuswrt-Merlin router |
+| VPN | Tailscale or OpenVPN | Choose: zero-config mesh or self-hosted |
 | UI | Flask + Kiosk | Simple, works in browser |
-| Discovery | mDNS + UDP broadcast | Local + VPN-wide discovery |
+| Discovery | mDNS + Tailscale API / UDP | Local + VPN-wide discovery |
 | Audio | ALSA/PulseAudio | Native Linux audio |
+
+### VPN Options
+
+| Option | Best For | Setup |
+|--------|----------|-------|
+| **Tailscale** | Easiest setup, works anywhere | `curl -fsSL https://tailscale.com/install.sh \| sh && sudo tailscale up` |
+| **OpenVPN** | Self-hosted, Asuswrt-Merlin routers | Export .ovpn from router, see [OPENVPN.md](docs/OPENVPN.md) |
+
+**Tailscale** is recommended for most users — zero-config, NAT traversal, works across networks.
+
+**OpenVPN** is ideal if you already run an Asuswrt-Merlin router with VPN server, or want fully self-hosted infrastructure.
 
 ### Why Not 3CX?
 

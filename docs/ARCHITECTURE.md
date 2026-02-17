@@ -30,16 +30,22 @@ Asterisk Configuration:
 
 ### Discovery Service
 
-Two-tier discovery:
+Multi-tier discovery based on VPN type:
 
 1. **mDNS (local network)** — `_redphone._tcp.local`
    - Works on LAN even without internet
    - Immediate discovery (~1 second)
+   - Always enabled
 
-2. **UDP Broadcast** — Announcements on VPN subnet
+2. **Tailscale API** (when `vpn: tailscale`)
+   - Queries Tailscale for machines with `tag:redphone`
+   - Polls every 30 seconds
+   - Works across any network
+
+3. **UDP Broadcast** (when `vpn: openvpn` or for LAN)
    - Each phone announces presence every 30 seconds
    - Broadcasts on port 5199
-   - Works across OpenVPN tunnel
+   - Works across OpenVPN tunnel (requires client-to-client)
 
 ```python
 # Discovery data structure
@@ -149,6 +155,30 @@ Option 2: **Audio detection** — Monitor mic input level
 
 ## Network Architecture
 
+### Option 1: Tailscale (Recommended)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Internet                            │
+└─────────────────────────────────────────────────────────┘
+                          │
+          ┌───────────────┼───────────────┐
+          │               │               │
+    ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
+    │ Tailscale │   │ Tailscale │   │ Tailscale │
+    │  DERP     │   │  DERP     │   │  DERP     │
+    └───────────┘   └───────────┘   └───────────┘
+          │               │               │
+    ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
+    │ Red Phone │◄─►│ Red Phone │◄─►│ Red Phone │
+    │ Kitchen   │   │ Bedroom   │   │ Office    │
+    └───────────┘   └───────────┘   └───────────┘
+```
+
+Tailscale handles NAT traversal automatically. Phones discover each other via Tailscale API (tagged with `tag:redphone`).
+
+### Option 2: OpenVPN (Asuswrt-Merlin)
+
 ```
                      ┌─────────────────────┐
                      │   Asuswrt-Merlin    │
@@ -166,13 +196,15 @@ Option 2: **Audio detection** — Monitor mic input level
       └───────────┘ Bcast └───────────┘ Bcast └───────────┘
 ```
 
-All phones connect to the router's OpenVPN server. The router's "Allow Client ↔ Client" setting enables direct communication between phones over the VPN tunnel.
+All phones connect to the router's OpenVPN server. The router's "Allow Client ↔ Client" setting enables direct communication. Discovery via UDP broadcast on port 5199.
 
 ## Security Model
 
-1. **VPN-only** — All traffic over OpenVPN tunnel
+1. **VPN-only** — All traffic over encrypted VPN tunnel
 2. **No external ports** — Nothing exposed to internet
-3. **TLS certificates** — OpenVPN uses router-generated certificates
+3. **Encryption**:
+   - Tailscale: WireGuard protocol, automatic key exchange
+   - OpenVPN: TLS certificates from router
 4. **Admin auth** — Password-protected admin API
 5. **Credentials protected** — VPN auth files mode 600
 
@@ -195,10 +227,10 @@ All phones connect to the router's OpenVPN server. The router's "Allow Client �
    - Start captive portal on port 80
    - Wait for WiFi configuration
 4. If network available:
-   - Start OpenVPN connection
-   - Wait for VPN tunnel to come up
+   - If `vpn: openvpn`: Start OpenVPN, wait for tunnel
+   - If `vpn: tailscale`: Verify Tailscale is connected
    - Start Asterisk
-   - Start discovery service (mDNS + UDP broadcast)
+   - Start discovery service (mDNS + Tailscale API / UDP)
    - Start Flask app in kiosk mode
 
 ## Dependencies
@@ -209,7 +241,8 @@ System packages:
 - python3
 - chromium-browser
 - pulseaudio / pipewire
-- openvpn
+- tailscale (if using Tailscale VPN)
+- openvpn (if using OpenVPN)
 - hostapd (WiFi hotspot)
 - dnsmasq (DHCP for hotspot)
 

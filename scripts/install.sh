@@ -73,23 +73,35 @@ apt-get install -y -qq \
 echo -e "${GREEN}✓ System packages installed${NC}"
 
 # ============================================================================
-# OpenVPN
+# VPN Options (Tailscale + OpenVPN)
 # ============================================================================
 
+echo -e "\n${YELLOW}Installing VPN clients...${NC}"
+
+# Install OpenVPN (for Asuswrt-Merlin or self-hosted VPN)
 if ! command -v openvpn &> /dev/null; then
-    echo -e "\n${YELLOW}Installing OpenVPN...${NC}"
     apt-get install -y -qq openvpn
     echo -e "${GREEN}✓ OpenVPN installed${NC}"
 else
     echo -e "${GREEN}✓ OpenVPN already installed${NC}"
 fi
 
-# Create VPN config directory
+# Install Tailscale (zero-config mesh VPN)
+if ! command -v tailscale &> /dev/null; then
+    curl -fsSL https://tailscale.com/install.sh | sh
+    echo -e "${GREEN}✓ Tailscale installed${NC}"
+else
+    echo -e "${GREEN}✓ Tailscale already installed${NC}"
+fi
+
+# Create VPN config directory for OpenVPN
 mkdir -p /etc/redphone/vpn
 chmod 700 /etc/redphone/vpn
 
-echo -e "${YELLOW}⚠ Place your .ovpn file at: /etc/redphone/vpn/client.ovpn${NC}"
-echo -e "${YELLOW}⚠ Create auth file at: /etc/redphone/vpn/auth.txt (username line 1, password line 2)${NC}"
+echo -e "\n${YELLOW}VPN Configuration:${NC}"
+echo -e "  Option 1 (Tailscale): Run ${GREEN}sudo tailscale up${NC} to authenticate"
+echo -e "  Option 2 (OpenVPN):   Place .ovpn at /etc/redphone/vpn/client.ovpn"
+echo -e "                        Create auth.txt with username/password"
 
 # ============================================================================
 # Python virtual environment

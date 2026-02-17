@@ -392,10 +392,16 @@ def on_phones_updated(phones: list[Phone]):
 
 def main():
     """Run the application."""
+    vpn_type = config.get("network.vpn", "tailscale")
+    
     # Start VPN if configured
-    if config.get("network.vpn") == "openvpn":
+    if vpn_type == "openvpn":
         logger.info("Starting OpenVPN connection...")
         openvpn.start()
+    elif vpn_type == "tailscale":
+        logger.info("Using Tailscale VPN (ensure 'tailscale up' has been run)")
+    else:
+        logger.info("No VPN configured - using local network only")
     
     # Register discovery callback
     discovery.on_phones_updated(on_phones_updated)

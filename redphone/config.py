@@ -13,7 +13,11 @@ DEFAULT_CONFIG = {
         "extension": 100,
     },
     "network": {
-        "vpn": "openvpn",
+        "vpn": "tailscale",  # openvpn | tailscale | none
+        "tailscale": {
+            "tailnet": "",
+            "tag": "redphone",
+        },
         "openvpn": {
             "config_file": "/etc/redphone/vpn/client.ovpn",
             "auth_file": "/etc/redphone/vpn/auth.txt",
@@ -36,6 +40,7 @@ DEFAULT_CONFIG = {
     },
     "discovery": {
         "mdns": True,
+        "tailscale_api": True,
         "udp_broadcast": True,
         "udp_port": 5199,
         "announce_interval": 30,
