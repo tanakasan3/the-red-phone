@@ -6,7 +6,7 @@
 - MicroSD card (32GB+)
 - Raspberry Pi OS Bookworm (64-bit recommended)
 - Internet connection for initial setup
-- Tailscale account
+- OpenVPN server on Asuswrt-Merlin router (see [OPENVPN.md](OPENVPN.md))
 
 ## Step 1: Flash Raspberry Pi OS
 
@@ -31,22 +31,34 @@ sudo apt update && sudo apt upgrade -y
 sudo reboot
 ```
 
-## Step 3: Install Tailscale
+## Step 3: Set Up OpenVPN
+
+You'll need the `.ovpn` file from your Asuswrt-Merlin router. See [OPENVPN.md](OPENVPN.md) for router setup.
 
 ```bash
-# Install Tailscale
-curl -fsSL https://tailscale.com/install.sh | sh
+# Create VPN directory
+sudo mkdir -p /etc/redphone/vpn
+sudo chmod 700 /etc/redphone/vpn
 
-# Start and authenticate
-sudo tailscale up
+# Copy your .ovpn file
+sudo cp /path/to/client.ovpn /etc/redphone/vpn/client.ovpn
 
-# Follow the auth URL in your browser
-
-# Verify connection
-tailscale status
+# Create credentials file
+sudo nano /etc/redphone/vpn/auth.txt
 ```
 
-**Important:** In Tailscale admin console, add the tag `tag:redphone` to this machine for discovery.
+Add your VPN username on line 1, password on line 2:
+```
+your-vpn-username
+your-vpn-password
+```
+
+Secure the files:
+```bash
+sudo chmod 600 /etc/redphone/vpn/*
+```
+
+**Important:** Enable "Allow Client ↔ Client" on your router for phone-to-phone discovery.
 
 ## Step 4: Install The Red Phone
 
@@ -132,7 +144,8 @@ chromium-browser --kiosk --noerrdialogs --disable-infobars http://localhost:5000
 
 ## Verification Checklist
 
-- [ ] Tailscale connected: `tailscale status`
+- [ ] OpenVPN connected: `ip addr show tun0`
+- [ ] VPN IP assigned: `curl http://localhost:5000/api/vpn/status`
 - [ ] Asterisk running: `sudo systemctl status asterisk`
 - [ ] Red Phone service running: `sudo systemctl status redphone`
 - [ ] Web UI accessible: `curl http://localhost:5000`
@@ -174,10 +187,11 @@ python -m redphone.app
 
 ### Phones not discovering each other
 
-1. Verify both on same Tailscale network: `tailscale status`
-2. Check both have `tag:redphone` in Tailscale admin
+1. Verify both connected to VPN: `curl http://localhost:5000/api/vpn/status`
+2. Check router has "Allow Client ↔ Client" enabled
 3. Verify mDNS: `avahi-browse -a | grep redphone`
-4. Check firewall: `sudo ufw status`
+4. Test UDP broadcast between phones (see [OPENVPN.md](OPENVPN.md#troubleshooting))
+5. Check firewall: `sudo ufw status`
 
 ### Audio issues
 

@@ -73,17 +73,23 @@ apt-get install -y -qq \
 echo -e "${GREEN}✓ System packages installed${NC}"
 
 # ============================================================================
-# Tailscale
+# OpenVPN
 # ============================================================================
 
-if ! command -v tailscale &> /dev/null; then
-    echo -e "\n${YELLOW}Installing Tailscale...${NC}"
-    curl -fsSL https://tailscale.com/install.sh | sh
-    echo -e "${GREEN}✓ Tailscale installed${NC}"
-    echo -e "${YELLOW}⚠ Run 'sudo tailscale up' to authenticate${NC}"
+if ! command -v openvpn &> /dev/null; then
+    echo -e "\n${YELLOW}Installing OpenVPN...${NC}"
+    apt-get install -y -qq openvpn
+    echo -e "${GREEN}✓ OpenVPN installed${NC}"
 else
-    echo -e "${GREEN}✓ Tailscale already installed${NC}"
+    echo -e "${GREEN}✓ OpenVPN already installed${NC}"
 fi
+
+# Create VPN config directory
+mkdir -p /etc/redphone/vpn
+chmod 700 /etc/redphone/vpn
+
+echo -e "${YELLOW}⚠ Place your .ovpn file at: /etc/redphone/vpn/client.ovpn${NC}"
+echo -e "${YELLOW}⚠ Create auth file at: /etc/redphone/vpn/auth.txt (username line 1, password line 2)${NC}"
 
 # ============================================================================
 # Python virtual environment

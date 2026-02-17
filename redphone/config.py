@@ -13,9 +13,13 @@ DEFAULT_CONFIG = {
         "extension": 100,
     },
     "network": {
-        "vpn": "tailscale",
-        "tailnet": "",
-        "tag": "redphone",
+        "vpn": "openvpn",
+        "openvpn": {
+            "config_file": "/etc/redphone/vpn/client.ovpn",
+            "auth_file": "/etc/redphone/vpn/auth.txt",
+            "auto_reconnect": True,
+            "reconnect_delay": 10,
+        },
     },
     "audio": {
         "input": "default",
@@ -32,8 +36,10 @@ DEFAULT_CONFIG = {
     },
     "discovery": {
         "mdns": True,
-        "tailscale_api": True,
-        "poll_interval": 30,
+        "udp_broadcast": True,
+        "udp_port": 5199,
+        "announce_interval": 30,
+        "phone_timeout": 120,
     },
     "ui": {
         "theme": "dark",

@@ -12,6 +12,7 @@ from flask_socketio import SocketIO, emit
 from .config import config
 from .discovery import discovery, Phone
 from .quiet_hours import is_quiet_hours
+from .openvpn import openvpn
 
 # Setup logging
 logging.basicConfig(
@@ -225,6 +226,52 @@ def api_update_config():
     return jsonify({"status": "ok"})
 
 
+@app.route("/api/vpn/status")
+def api_vpn_status():
+    """Get VPN connection status."""
+    return jsonify({
+        "connected": openvpn.is_connected,
+        "vpn_ip": openvpn.get_vpn_ip(),
+        "provider": config.get("network.vpn", "openvpn"),
+    })
+
+
+@app.route("/api/vpn/setup", methods=["POST"])
+@admin_required
+def api_vpn_setup():
+    """Set up VPN credentials and config."""
+    data = request.get_json()
+    
+    # Handle credentials
+    if "username" in data and "password" in data:
+        if not openvpn.setup_credentials(data["username"], data["password"]):
+            return jsonify({"error": "Failed to save credentials"}), 500
+    
+    # Handle .ovpn config
+    if "ovpn_config" in data:
+        if not openvpn.setup_config(data["ovpn_config"]):
+            return jsonify({"error": "Failed to save OpenVPN config"}), 500
+    
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/vpn/connect", methods=["POST"])
+@admin_required
+def api_vpn_connect():
+    """Start VPN connection."""
+    if openvpn.start():
+        return jsonify({"status": "connecting"})
+    return jsonify({"error": "Failed to start VPN"}), 500
+
+
+@app.route("/api/vpn/disconnect", methods=["POST"])
+@admin_required
+def api_vpn_disconnect():
+    """Stop VPN connection."""
+    openvpn.stop()
+    return jsonify({"status": "disconnected"})
+
+
 @app.route("/api/call", methods=["POST"])
 def api_call():
     """Initiate a call."""
@@ -283,7 +330,8 @@ def health():
     return jsonify({
         "status": "healthy",
         "asterisk": "running",  # TODO: Actually check
-        "tailscale": "connected",  # TODO: Actually check
+        "vpn": "connected" if openvpn.is_connected else "disconnected",
+        "vpn_ip": openvpn.get_vpn_ip(),
         "discovery": "active" if discovery._running else "stopped",
     })
 
@@ -344,6 +392,11 @@ def on_phones_updated(phones: list[Phone]):
 
 def main():
     """Run the application."""
+    # Start VPN if configured
+    if config.get("network.vpn") == "openvpn":
+        logger.info("Starting OpenVPN connection...")
+        openvpn.start()
+    
     # Register discovery callback
     discovery.on_phones_updated(on_phones_updated)
 

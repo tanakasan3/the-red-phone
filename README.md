@@ -27,7 +27,7 @@ Think of it as a private intercom system for your family, hackerspace, or secret
 | Display | Official 7" Raspberry Pi Touchscreen (or compatible) |
 | OS | Raspberry Pi OS (Bookworm) |
 | Audio | USB headset (testing) or 3.5mm TRRS to handset |
-| Network | WiFi or Ethernet + Tailscale VPN |
+| Network | WiFi or Ethernet + OpenVPN (Asuswrt-Merlin) |
 | Enclosure | Vintage rotary phone shell or 3D printed |
 
 ### Audio Options
@@ -60,8 +60,8 @@ Think of it as a private intercom system for your family, hackerspace, or secret
 │                          │                              │
 ├──────────────────────────┼──────────────────────────────┤
 │                   ┌──────▼──────┐                       │
-│                   │  Tailscale  │                       │
-│                   │     VPN     │                       │
+│                   │   OpenVPN   │                       │
+│                   │   (tun0)    │                       │
 │                   └─────────────┘                       │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -104,7 +104,7 @@ the-red-phone/
 ├── redphone/
 │   ├── __init__.py
 │   ├── app.py             # Main Flask application
-│   ├── discovery.py       # mDNS/Tailscale discovery
+│   ├── discovery.py       # mDNS/UDP broadcast discovery
 │   ├── sip.py             # SIP client wrapper
 │   ├── config.py          # Configuration management
 │   └── audio.py           # Audio device management
@@ -148,8 +148,10 @@ phone:
   extension: 101            # SIP extension number
 
 network:
-  vpn: tailscale            # VPN provider
-  tailnet: mynet.ts.net     # Tailscale network name
+  vpn: openvpn              # VPN provider
+  openvpn:
+    config_file: /etc/redphone/vpn/client.ovpn
+    auth_file: /etc/redphone/vpn/auth.txt
 
 audio:
   input: "default"          # ALSA input device
@@ -172,9 +174,9 @@ admin:
 | Component | Choice | Why |
 |-----------|--------|-----|
 | PBX | Asterisk | Open source, runs on Pi, proven |
-| VPN | Tailscale | Zero-config mesh, NAT traversal |
+| VPN | OpenVPN | Works with Asuswrt-Merlin router |
 | UI | Flask + Kiosk | Simple, works in browser |
-| Discovery | mDNS + Tailscale API | Local + VPN-wide discovery |
+| Discovery | mDNS + UDP broadcast | Local + VPN-wide discovery |
 | Audio | ALSA/PulseAudio | Native Linux audio |
 
 ### Why Not 3CX?
@@ -185,7 +187,7 @@ admin:
 
 - [ ] Basic Flask UI with phone list
 - [ ] Asterisk auto-configuration
-- [ ] Tailscale discovery integration
+- [ ] OpenVPN auto-connect on boot
 - [ ] Handset off-hook detection (GPIO or audio)
 - [ ] Ring/flash on incoming call
 - [ ] Quiet hours with confirmation dialog

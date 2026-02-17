@@ -9,14 +9,27 @@ phone:
   extension: 101
 
 network:
-  # VPN provider: tailscale, wireguard, none
-  vpn: tailscale
+  # VPN provider: openvpn, tailscale, wireguard, none
+  vpn: openvpn
   
-  # Tailscale network name (for discovery)
-  tailnet: example.ts.net
+  # OpenVPN settings (for Asuswrt-Merlin router VPN server)
+  openvpn:
+    # Path to .ovpn config file
+    config_file: /etc/redphone/vpn/client.ovpn
+    
+    # Credentials file (contains username on line 1, password on line 2)
+    auth_file: /etc/redphone/vpn/auth.txt
+    
+    # Auto-reconnect on disconnect
+    auto_reconnect: true
+    
+    # Reconnect delay (seconds)
+    reconnect_delay: 10
   
-  # Tag for discovery (phones with this tag are discoverable)
-  tag: redphone
+  # Tailscale settings (alternative VPN)
+  tailscale:
+    tailnet: example.ts.net
+    tag: redphone
 
 audio:
   # ALSA device names (use 'arecord -l' and 'aplay -l' to list)
@@ -47,11 +60,17 @@ discovery:
   # Enable mDNS local network discovery
   mdns: true
   
-  # Enable Tailscale API discovery
-  tailscale_api: true
+  # Enable UDP broadcast discovery (works across VPN)
+  udp_broadcast: true
   
-  # How often to poll for new phones (seconds)
-  poll_interval: 30
+  # UDP broadcast port
+  udp_port: 5199
+  
+  # How often to announce presence (seconds)
+  announce_interval: 30
+  
+  # Phone timeout - mark offline after no announcement (seconds)
+  phone_timeout: 120
 
 ui:
   # UI theme: dark, light

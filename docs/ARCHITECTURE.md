@@ -36,9 +36,10 @@ Two-tier discovery:
    - Works on LAN even without internet
    - Immediate discovery (~1 second)
 
-2. **Tailscale API** — Query machines with tag `redphone`
-   - VPN-wide discovery
-   - Polls every 30 seconds
+2. **UDP Broadcast** — Announcements on VPN subnet
+   - Each phone announces presence every 30 seconds
+   - Broadcasts on port 5199
+   - Works across OpenVPN tunnel
 
 ```python
 # Discovery data structure
@@ -149,36 +150,31 @@ Option 2: **Audio detection** — Monitor mic input level
 ## Network Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Internet                            │
-└─────────────────────────────────────────────────────────┘
-                          │
-          ┌───────────────┼───────────────┐
-          │               │               │
-    ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
-    │ Tailscale │   │ Tailscale │   │ Tailscale │
-    │  Relay    │   │  Relay    │   │  Relay    │
-    └───────────┘   └───────────┘   └───────────┘
-          │               │               │
-          └───────────────┼───────────────┘
-                          │
-    ┌─────────────────────┼─────────────────────┐
-    │                     │                     │
-┌───▼───┐           ┌─────▼─────┐         ┌─────▼─────┐
-│ Red   │◄─────────►│   Red     │◄───────►│   Red     │
-│ Phone │  Direct   │   Phone   │  Mesh   │   Phone   │
-│ #1    │  P2P      │   #2      │         │   #3      │
-└───────┘           └───────────┘         └───────────┘
+                     ┌─────────────────────┐
+                     │   Asuswrt-Merlin    │
+                     │   Router + OpenVPN  │
+                     │   Server (10.8.0.1) │
+                     └──────────┬──────────┘
+                                │
+            ┌───────────────────┼───────────────────┐
+            │ VPN Tunnel        │ VPN Tunnel        │ VPN Tunnel
+            │                   │                   │
+      ┌─────▼─────┐       ┌─────▼─────┐       ┌─────▼─────┐
+      │ Red Phone │       │ Red Phone │       │ Red Phone │
+      │ Kitchen   │◄─────►│ Bedroom   │◄─────►│ Office    │
+      │ 10.8.0.2  │ UDP   │ 10.8.0.3  │ UDP   │ 10.8.0.4  │
+      └───────────┘ Bcast └───────────┘ Bcast └───────────┘
 ```
 
-Tailscale handles NAT traversal automatically. Phones connect directly when possible (same LAN) or via DERP relays when behind NAT.
+All phones connect to the router's OpenVPN server. The router's "Allow Client ↔ Client" setting enables direct communication between phones over the VPN tunnel.
 
 ## Security Model
 
-1. **VPN-only** — All traffic over Tailscale mesh
+1. **VPN-only** — All traffic over OpenVPN tunnel
 2. **No external ports** — Nothing exposed to internet
-3. **mTLS** — Tailscale provides mutual TLS between nodes
+3. **TLS certificates** — OpenVPN uses router-generated certificates
 4. **Admin auth** — Password-protected admin API
+5. **Credentials protected** — VPN auth files mode 600
 
 ## File Locations
 
@@ -199,9 +195,10 @@ Tailscale handles NAT traversal automatically. Phones connect directly when poss
    - Start captive portal on port 80
    - Wait for WiFi configuration
 4. If network available:
-   - Start Tailscale (if not running)
+   - Start OpenVPN connection
+   - Wait for VPN tunnel to come up
    - Start Asterisk
-   - Start discovery service
+   - Start discovery service (mDNS + UDP broadcast)
    - Start Flask app in kiosk mode
 
 ## Dependencies
@@ -212,7 +209,7 @@ System packages:
 - python3
 - chromium-browser
 - pulseaudio / pipewire
-- tailscale
+- openvpn
 - hostapd (WiFi hotspot)
 - dnsmasq (DHCP for hotspot)
 
