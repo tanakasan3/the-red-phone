@@ -21,8 +21,8 @@
 ## Step 2: Initial Boot
 
 ```bash
-# SSH into the Pi
-ssh pi@redphone-kitchen.local
+# SSH into the Pi (use your configured username)
+ssh <your-user>@redphone-kitchen.local
 
 # Update system
 sudo apt update && sudo apt upgrade -y
@@ -54,7 +54,7 @@ tailscale status
 # Clone repository
 cd /opt
 sudo git clone https://github.com/tanakasan3/the-red-phone.git redphone
-sudo chown -R pi:pi /opt/redphone
+sudo chown -R $USER:$USER /opt/redphone
 
 # Run installer
 cd /opt/redphone

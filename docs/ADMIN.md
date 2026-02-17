@@ -175,15 +175,15 @@ sudo tar -czvf redphone-backup.tar.gz \
   /etc/redphone/ \
   /var/lib/redphone/
 
-# Copy off the Pi
-scp pi@phone:/home/pi/redphone-backup.tar.gz .
+# Copy off the Pi (replace <user> with your username)
+scp <user>@phone:~/redphone-backup.tar.gz .
 ```
 
 ### Restore
 
 ```bash
-scp redphone-backup.tar.gz pi@newphone:/home/pi/
-ssh pi@newphone
+scp redphone-backup.tar.gz <user>@newphone:~/
+ssh <user>@newphone
 
 sudo tar -xzvf redphone-backup.tar.gz -C /
 sudo systemctl restart redphone

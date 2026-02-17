@@ -21,6 +21,20 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Detect the actual user (not root when using sudo)
+if [ -n "$SUDO_USER" ]; then
+    INSTALL_USER="$SUDO_USER"
+elif [ -n "$LOGNAME" ]; then
+    INSTALL_USER="$LOGNAME"
+else
+    INSTALL_USER="$(whoami)"
+fi
+
+# Get user's home directory
+USER_HOME=$(getent passwd "$INSTALL_USER" | cut -d: -f6)
+
+echo -e "${GREEN}✓ Installing for user: ${INSTALL_USER}${NC}"
+
 # Detect if running on Raspberry Pi
 if grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
     IS_PI=true
@@ -174,9 +188,9 @@ if [ "$IS_PI" = true ]; then
     echo -e "\n${YELLOW}Configuring kiosk mode...${NC}"
     
     # Create kiosk startup script
-    mkdir -p /home/pi/.config/autostart
+    mkdir -p "${USER_HOME}/.config/autostart"
     
-    cat > /home/pi/.config/autostart/redphone-kiosk.desktop << EOF
+    cat > "${USER_HOME}/.config/autostart/redphone-kiosk.desktop" << EOF
 [Desktop Entry]
 Type=Application
 Name=RedPhone Kiosk
@@ -184,7 +198,7 @@ Exec=/usr/bin/chromium-browser --kiosk --noerrdialogs --disable-infobars --disab
 X-GNOME-Autostart-enabled=true
 EOF
     
-    chown pi:pi /home/pi/.config/autostart/redphone-kiosk.desktop
+    chown "${INSTALL_USER}:${INSTALL_USER}" "${USER_HOME}/.config/autostart/redphone-kiosk.desktop"
     
     # Disable screen blanking
     if [ -f /etc/lightdm/lightdm.conf ]; then
