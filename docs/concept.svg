@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <defs>
+    <!-- Gradients for 3D effect -->
+    <linearGradient id="phoneBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#cc2020"/>
+      <stop offset="50%" style="stop-color:#aa1818"/>
+      <stop offset="100%" style="stop-color:#881010"/>
+    </linearGradient>
+    <linearGradient id="handset" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#dd2525"/>
+      <stop offset="50%" style="stop-color:#bb1a1a"/>
+      <stop offset="100%" style="stop-color:#991212"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="6" stdDeviation="8" flood-opacity="0.4"/>
+    </filter>
+    <filter id="innerShadow">
+      <feOffset dx="0" dy="2"/>
+      <feGaussianBlur stdDeviation="2"/>
+      <feComposite operator="out" in="SourceGraphic"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.3 0"/>
+      <feBlend mode="normal" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="500" fill="#f5f0e8"/>
+  
+  <!-- Phone base/body -->
+  <rect x="60" y="180" width="280" height="280" rx="20" fill="url(#phoneBody)" filter="url(#shadow)"/>
+  
+  <!-- Phone base top curve -->
+  <ellipse cx="200" cy="195" rx="130" ry="25" fill="#bb1818"/>
+  
+  <!-- Handset cradle -->
+  <rect x="85" y="60" width="230" height="35" rx="8" fill="#992020"/>
+  <rect x="90" y="55" width="220" height="30" rx="6" fill="#aa1818"/>
+  
+  <!-- Handset -->
+  <g filter="url(#shadow)">
+    <!-- Left earpiece -->
+    <ellipse cx="105" cy="45" rx="35" ry="28" fill="url(#handset)"/>
+    <ellipse cx="105" cy="45" rx="25" ry="18" fill="#222"/>
+    <ellipse cx="105" cy="45" rx="20" ry="14" fill="#333">
+      <animate attributeName="opacity" values="1;0.8;1" dur="3s" repeatCount="indefinite"/>
+    </ellipse>
+    
+    <!-- Handle -->
+    <path d="M 130 45 Q 200 20 270 45" stroke="url(#handset)" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M 130 45 Q 200 25 270 45" stroke="#cc2222" stroke-width="18" fill="none" stroke-linecap="round"/>
+    
+    <!-- Right mouthpiece -->
+    <ellipse cx="295" cy="45" rx="35" ry="28" fill="url(#handset)"/>
+    <ellipse cx="295" cy="45" rx="25" ry="18" fill="#222"/>
+    <ellipse cx="295" cy="45" rx="20" ry="14" fill="#333"/>
+    <!-- Mouthpiece holes -->
+    <circle cx="290" cy="42" r="2" fill="#111"/>
+    <circle cx="295" cy="42" r="2" fill="#111"/>
+    <circle cx="300" cy="42" r="2" fill="#111"/>
+    <circle cx="290" cy="48" r="2" fill="#111"/>
+    <circle cx="295" cy="48" r="2" fill="#111"/>
+    <circle cx="300" cy="48" r="2" fill="#111"/>
+  </g>
+  
+  <!-- Coiled cord (simplified) -->
+  <path d="M 200 95 Q 180 120 200 140 Q 220 160 200 180" stroke="#661010" stroke-width="6" fill="none"/>
+  <path d="M 200 95 Q 180 120 200 140 Q 220 160 200 180" stroke="#881515" stroke-width="4" fill="none"/>
+  
+  <!-- Touchscreen bezel -->
+  <rect x="95" y="220" width="210" height="200" rx="10" fill="#222" filter="url(#innerShadow)"/>
+  
+  <!-- Touchscreen display -->
+  <rect x="105" y="230" width="190" height="180" rx="6" fill="url(#screen)"/>
+  
+  <!-- Screen content - Contact buttons -->
+  <!-- Header -->
+  <text x="200" y="258" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#ff6b6b" font-weight="bold">📞 THE RED PHONE</text>
+  
+  <!-- Button: Maman -->
+  <rect x="120" y="275" width="160" height="42" rx="8" fill="#cc3030" opacity="0.9"/>
+  <rect x="120" y="275" width="160" height="42" rx="8" fill="none" stroke="#ff5555" stroke-width="1"/>
+  <text x="200" y="302" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#fff" font-weight="bold">👩 Maman</text>
+  
+  <!-- Button: Frero -->
+  <rect x="120" y="325" width="160" height="42" rx="8" fill="#cc3030" opacity="0.9"/>
+  <rect x="120" y="325" width="160" height="42" rx="8" fill="none" stroke="#ff5555" stroke-width="1"/>
+  <text x="200" y="352" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#fff" font-weight="bold">👨 Frero</text>
+  
+  <!-- Button: Poulin -->
+  <rect x="120" y="375" width="160" height="42" rx="8" fill="#cc3030" opacity="0.9"/>
+  <rect x="120" y="375" width="160" height="42" rx="8" fill="none" stroke="#ff5555" stroke-width="1"/>
+  <text x="200" y="402" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#fff" font-weight="bold">🐕 Poulin</text>
+  
+  <!-- Status indicator -->
+  <circle cx="270" cy="250" r="5" fill="#44ff88">
+    <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Decorative elements on phone body -->
+  <rect x="100" y="435" width="200" height="8" rx="4" fill="#771010"/>
+  
+  <!-- Label -->
+  <text x="200" y="480" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#666" font-style="italic">Raspberry Pi + Touchscreen + Asterisk VoIP</text>
+</svg>

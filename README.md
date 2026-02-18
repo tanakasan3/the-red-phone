@@ -4,6 +4,10 @@ A retro VoIP intercom system built on Raspberry Pi — because every secret lair
 
 ![Status: In Development](https://img.shields.io/badge/status-in%20development-yellow)
 
+<p align="center">
+  <img src="docs/concept.png" alt="The Red Phone Concept" width="300"/>
+</p>
+
 ## What Is This?
 
 The Red Phone is a self-contained VoIP phone built into a vintage telephone shell (or 3D-printed replica). Multiple Red Phones connect over a VPN mesh and can call each other with a simple touch interface — no phone company required.
